@@ -1,0 +1,32 @@
+services:
+  # ── FastAPI Gateway ──────────────────────────────
+  gateway:
+    build:
+      context: ./gateway
+    container_name: aifops-gateway
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persist SQLite DB outside the container so data survives restarts
+      - gateway-data:/app/data
+    environment:
+      - DATABASE_PATH=/app/data/gateway.db
+    restart: unless-stopped
+
+  # ── Next.js Dashboard ───────────────────────────
+  dashboard:
+    build:
+      context: ./dashboard
+      args:
+        # Use the internal Docker network hostname for server-side calls.
+        # Client-side calls from the browser still go to localhost:8000.
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    container_name: aifops-dashboard
+    ports:
+      - "3000:3000"
+    depends_on:
+      - gateway
+    restart: unless-stopped
+
+volumes:
+  gateway-data:
