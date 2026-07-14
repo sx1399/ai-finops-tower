@@ -8,7 +8,7 @@ import { API_BASE } from "@/lib/api";
 interface Metrics {
   total_spend: number;
   total_saved: number;
-  active_reductions_percent: number;
+  active_reductions: number;
 }
 
 interface ChartData {
@@ -26,11 +26,7 @@ interface Query {
   latency: number;
 }
 
-const formatCurrency = (val: number | undefined | null) => {
-  if (val === undefined || val === null) return '0.00';
-  if (val > 0 && val < 0.01) return val.toFixed(4);
-  return val.toFixed(2);
-};
+
 
 export default function Dashboard() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
@@ -52,7 +48,7 @@ export default function Dashboard() {
           setMetrics({
             total_spend: parseFloat(rawMetrics.total_spend || 0),
             total_saved: parseFloat(rawMetrics.total_saved || 0),
-            active_reductions_percent: parseFloat(rawMetrics.active_reductions_percent || 0)
+            active_reductions: parseFloat(rawMetrics.active_reductions || 0)
           });
         }
         if (chartRes.ok) setChartData(await chartRes.json());
@@ -96,7 +92,7 @@ export default function Dashboard() {
               </div>
               <h2 className="text-sm font-semibold uppercase tracking-wider">Total AI Spend</h2>
             </div>
-            <p className="text-4xl font-bold text-white relative z-10">${formatCurrency(metrics?.total_spend)}</p>
+            <p className="text-4xl font-bold text-white relative z-10">${Number(metrics?.total_spend || 0).toFixed(2)}</p>
           </div>
           
           <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800 shadow-lg relative overflow-hidden group">
@@ -109,7 +105,7 @@ export default function Dashboard() {
               </div>
               <h2 className="text-sm font-semibold uppercase tracking-wider">Total Saved</h2>
             </div>
-            <p className="text-4xl font-bold text-green-400 relative z-10">${formatCurrency(metrics?.total_saved)}</p>
+            <p className="text-4xl font-bold text-green-400 relative z-10">${Number(metrics?.total_saved || 0).toFixed(2)}</p>
           </div>
 
           <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800 shadow-lg relative overflow-hidden group">
@@ -122,7 +118,7 @@ export default function Dashboard() {
               </div>
               <h2 className="text-sm font-semibold uppercase tracking-wider">Active Reductions</h2>
             </div>
-            <p className="text-4xl font-bold text-blue-400 relative z-10">{metrics?.active_reductions_percent?.toFixed(1) || '0.0'}%</p>
+            <p className="text-4xl font-bold text-blue-400 relative z-10">{Number(metrics?.active_reductions || 0).toFixed(1)}%</p>
           </div>
         </div>
 

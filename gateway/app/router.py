@@ -195,7 +195,7 @@ async def get_metrics():
         return JSONResponse(content={
             "total_spend": total_spend,
             "total_saved": total_saved,
-            "active_reductions_percent": active_reductions
+            "active_reductions": active_reductions
         })
     finally:
         conn.close()
