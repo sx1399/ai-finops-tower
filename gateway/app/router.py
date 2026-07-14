@@ -24,7 +24,7 @@ MODEL_PRICING = {
 }
 
 # SQLite database location used by the gateway and the chart endpoint
-DB_PATH = r"C:\Users\saifa\Desktop\ai-finops-tower\gateway\gateway.db"
+DB_PATH = os.getenv("DATABASE_PATH", "gateway.db")
 
 
 def get_db_connection():
@@ -141,9 +141,96 @@ def get_hourly_chart_data() -> list[dict]:
     ]
 
 
+@router.post("/mock/completions")
+async def mock_completions(request: Request):
+    body = await request.json()
+    return JSONResponse({
+        "id": "chatcmpl-mock",
+        "object": "chat.completion",
+        "created": int(datetime.utcnow().timestamp()),
+        "model": body.get("model", "unknown-mock-model"),
+        "choices": [
+            {
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": "This is a successful mock upstream response.",
+                },
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 10,
+            "completion_tokens": 10,
+            "total_tokens": 20,
+        },
+    })
+
 @router.get("/api/chart-data")
 async def chart_data():
     return JSONResponse(content=get_hourly_chart_data())
+
+@router.get("/api/metrics")
+async def get_metrics():
+    conn = get_db_connection()
+    try:
+        row = conn.execute(
+            """
+            SELECT SUM(spend) as total_spend, SUM(saved) as total_saved
+            FROM (
+                SELECT original_cost as spend, cost_saved as saved FROM request_logs
+                UNION ALL
+                SELECT estimated_cost_usd as spend, cached_savings_usd as saved FROM telemetry
+            )
+            """
+        ).fetchone()
+        
+        total_spend = float(row["total_spend"] if row else 0.0)
+        total_saved = float(row["total_saved"] if row else 0.0)
+        active_reductions = 0.0
+        
+        if (total_spend) > 0:
+            active_reductions = (total_saved / total_spend) * 100
+            
+        return JSONResponse(content={
+            "total_spend": total_spend,
+            "total_saved": total_saved,
+            "active_reductions_percent": active_reductions
+        })
+    finally:
+        conn.close()
+
+@router.get("/api/queries")
+async def get_queries():
+    conn = get_db_connection()
+    try:
+        rows = conn.execute(
+            """
+            SELECT 
+                id,
+                timestamp,
+                original_model,
+                routed_model,
+                cache_hit
+            FROM request_logs
+            ORDER BY timestamp DESC
+            LIMIT 50
+            """
+        ).fetchall()
+        
+        return JSONResponse(content=[
+            {
+                "id": row["id"],
+                "timestamp": row["timestamp"],
+                "original_model": row["original_model"],
+                "routed_model": row["routed_model"],
+                "cached": bool(row["cache_hit"]),
+                "latency": 0 # Mock latency since not stored in request_logs
+            }
+            for row in rows
+        ])
+    finally:
+        conn.close()
 
 
 @router.post("/openai/v1/chat/completions")

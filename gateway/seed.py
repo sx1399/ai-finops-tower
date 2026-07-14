@@ -3,7 +3,9 @@ import aiosqlite
 from datetime import datetime, timedelta
 import random
 
-DATABASE_URL = "gateway.db"
+import os
+
+DATABASE_URL = os.getenv("DATABASE_PATH", "gateway.db")
 
 async def seed():
     try:

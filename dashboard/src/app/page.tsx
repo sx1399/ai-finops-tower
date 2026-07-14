@@ -26,6 +26,12 @@ interface Query {
   latency: number;
 }
 
+const formatCurrency = (val: number | undefined | null) => {
+  if (val === undefined || val === null) return '0.00';
+  if (val > 0 && val < 0.01) return val.toFixed(4);
+  return val.toFixed(2);
+};
+
 export default function Dashboard() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [chartData, setChartData] = useState<ChartData[]>([]);
@@ -41,7 +47,14 @@ export default function Dashboard() {
           fetch(`${API_BASE}/api/queries`),
         ]);
         
-        if (metricsRes.ok) setMetrics(await metricsRes.json());
+        if (metricsRes.ok) {
+          const rawMetrics = await metricsRes.json();
+          setMetrics({
+            total_spend: parseFloat(rawMetrics.total_spend || 0),
+            total_saved: parseFloat(rawMetrics.total_saved || 0),
+            active_reductions_percent: parseFloat(rawMetrics.active_reductions_percent || 0)
+          });
+        }
         if (chartRes.ok) setChartData(await chartRes.json());
         if (queriesRes.ok) setQueries(await queriesRes.json());
       } catch (error) {
@@ -52,6 +65,8 @@ export default function Dashboard() {
     };
     
     fetchData();
+    const interval = setInterval(fetchData, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) {
@@ -81,7 +96,7 @@ export default function Dashboard() {
               </div>
               <h2 className="text-sm font-semibold uppercase tracking-wider">Total AI Spend</h2>
             </div>
-            <p className="text-4xl font-bold text-white relative z-10">${metrics?.total_spend?.toFixed(2) || '0.00'}</p>
+            <p className="text-4xl font-bold text-white relative z-10">${formatCurrency(metrics?.total_spend)}</p>
           </div>
           
           <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800 shadow-lg relative overflow-hidden group">
@@ -94,7 +109,7 @@ export default function Dashboard() {
               </div>
               <h2 className="text-sm font-semibold uppercase tracking-wider">Total Saved</h2>
             </div>
-            <p className="text-4xl font-bold text-green-400 relative z-10">${metrics?.total_saved?.toFixed(2) || '0.00'}</p>
+            <p className="text-4xl font-bold text-green-400 relative z-10">${formatCurrency(metrics?.total_saved)}</p>
           </div>
 
           <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800 shadow-lg relative overflow-hidden group">

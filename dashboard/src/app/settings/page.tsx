@@ -41,7 +41,12 @@ export default function SettingsPage() {
     }
   }, []);
 
-  useEffect(() => { fetchKeys(); }, [fetchKeys]);
+  useEffect(() => { 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchKeys();
+    const interval = setInterval(fetchKeys, 3000);
+    return () => clearInterval(interval);
+  }, [fetchKeys]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
